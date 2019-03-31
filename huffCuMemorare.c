@@ -10,6 +10,7 @@
 */
 
 //declarate global pentru a nu trata initializarea cu 0.
+//nu cunoastem la inceput numarul de caractere distincte din text
 int nr_aparitii[255];
 double probabilitati[255];
 
@@ -17,6 +18,7 @@ double probabilitati[255];
 //functie care determina dimensiunea fisierului
 int getFileLength(FILE *f)
 {
+
 	int length;
 	if(f == NULL)
 	{	
@@ -217,8 +219,8 @@ void Heapify(MinHeap* minHeap, int i)
 	int st = 2 * i + 1; 
 	int dr = 2 * i + 2; 
 	
-	if (st < minHeap->size && minHeap->array[st]->freq < minHeap->array[minim]->freq)
-	{
+	if ((st < minHeap -> size) && (minHeap -> array[st] -> freq) < (minHeap -> array[minim] -> freq))
+	{ 
 
 		minim = st; 
 	}
@@ -508,16 +510,19 @@ int getPos(MinHeapNode* root, char* data)
 {
 
 	int pos = 0;
+	// parcurg vectorul
 	while(root->data != *(data+pos))
 	{
 
 		pos++;
 	}
-	if(root->data == *(data+pos))
+
+	//pana cand determin pozitia la care se afla elementul
+	/*if(root->data == *(data+pos))
 	{
 
 		printf("Pozitia este: %d\n", pos);
-	}
+	}*/
 
 	return pos;
 }
@@ -602,8 +607,8 @@ void storeCodes (MinHeapNode* root, int arr[], int top, int** codes, int* bitLen
 		createCodesElement(pos, arr, top, codes, bitLength);
 
 		//verific daca s-a memorat corect
-		printf("Caracterul %c: ", root -> data);
-		printElement(*(codes + pos), top);
+		/*printf("Caracterul %c: ", root -> data);
+		printElement(*(codes + pos), top);*/
 	} 
 }
 
@@ -653,7 +658,7 @@ void printCharacterCode(int* character, int length)
 	for(i = 0; i < length; i++)
 	{
 
-		printf("%d", *(character+i));
+		printf("%d", *(character + i));
 	}
 	printf("\t");
 }
@@ -684,17 +689,269 @@ void printMap(HuffmanMap* myMap)
 	}
 }
 
-/*void writeCompressedFile(FILE* outFile, char* buffer, HuffmanMap myMap)
+
+
+/*
+*********************************************************
+************FUNCTII PENTRU LUCRUL CU FISIERE*************
+***************CODIFICARE SI DECODIFICARE****************
+*********************************************************
+*/
+
+
+
+/*
+lungimea in biti a fisierului rezultat este bitLength[i] * freq[i],
+pentru i de la 0 la count. 
+*/
+int determineCompressedLength(HuffmanMap* myMap)
 {
 
 	int i;
-	int k = 0; // lungimea fisierului in biti
-	for (i = 0; i < length; i++)
+	int length = 0;
+	for(i = 0; i <  myMap->count; i++)
+	{
+
+		length += myMap->bitLength[i] * myMap->freq[i];
+	}
+
+	// returnez lungimea in Bytes
+	if (length % 8 == 0)
+	{
+	
+		return length/8;
+	}
+	else
+	{
+	
+		return length/8 + 1;
+	}
+}
+
+
+/*
+- vreau sa accesez in O(1)
+- toate caracterele au o pozitie unica
+- am nevoie sa accesez codul caracterului pe baza caracterului,
+- si nu cunosc pozitia caracterului in vector
+- asociez fiecarui element o pozitie in hashTable
+- pozitia este hashTable(codASCII)
+- valoarea este pozitia la care se afla elementul in myMap
+- asigur accesare in O(1)
+*/
+void createHashTable(int *hashTable, HuffmanMap* myMap)
+{
+	
+	int i;
+	int pos;
+	for(i = 0; i < myMap->count; i++)
 	{
 		
-			
+		pos = (int) myMap -> data[i];
+		*(hashTable + pos) = i;
 	}
-}*/
+
+	/*printf("\n\nAfisarea hashTable-ului:\n");
+	for(i = 0; i < myMap->count; i++)
+	{
+
+		pos = (int) myMap -> data[i];
+		printf("caracterul %c: hashTable[%i]\n", myMap->data[*(hashTable + pos)], (int) (*(hashTable + pos)));
+	}*/
+}
+
+
+// pozitia in hashTable a caracterului curent este valoarea de la pozitia hashTable[current]
+int returnPosition (char current, int* hashTable)
+{
+	
+	return *(hashTable + (int) current);
+}
+
+
+/*
+- vectorul temp este un vector a carui indici contin bitii,
+de la MSB la LSB ( 0 -> 7)
+- lui temp[0], care este MSB ii corespunde 2^7, sau 1<<7,
+cu operatii pe biti
+....
+- temp[6] corespunde 2^1 1<<1
+- lui temp[7], care este LSB, ii corespunde 2^0, sau 1<<0
+*/
+int* updateBuffer(unsigned char* compressedBuffer, int* iterator, unsigned char* temp)
+{
+	int bit;
+	unsigned char toWrite = 0;
+	int i = 0;
+	printf("Urmeaza sa scriu:");
+	for(i = 0; i < 8; i++)
+	{
+		bit = *(temp + i);
+		printf("%d", bit);
+		if (bit == 1)
+		{
+			toWrite += bit<<(7-i);
+		}
+	}
+	printf("\nIn updateBuffer_%d: %d\n", *iterator, (unsigned char) toWrite);
+	*(compressedBuffer + *iterator) = toWrite;
+	(*iterator)++;
+	return iterator;
+}
+
+
+// functie auxiliara care afiseaza continutul vectorului tem
+void printTemp (unsigned char* temp)
+{
+	int i;
+	for (i = 0; i < 8; i ++)
+	{
+
+		printf("%i", *(temp+i));
+	}
+	printf("\n");
+}
+
+
+
+// functie care scrie biti in temp pana cand se strang 32
+// apeleaza updateBuffer epentru a scrie un int in compressedBuffer
+int* writeBits(int bitLength, unsigned char* compressedBuffer, int* codeBits, int* iterator, int* bitFlag, unsigned char* temp)
+{
+
+	int i;
+
+	// memorez in temp bit cu bit pana bitFlag ajunge la 8
+	// atunci il resetez si scriu un byte in compressedBuffer
+	for (i = 0; i < bitLength; i++)
+	{
+		
+		unsigned char currentBit = *(codeBits + i);
+		printf("\nBITUL CURENT_%d: %d\n", *bitFlag, currentBit);
+		if( *bitFlag < 7)
+		{
+
+			*(temp + *bitFlag) = currentBit;
+			(*bitFlag)++;
+			
+		}
+		else
+		{
+
+			*(temp + *bitFlag) = currentBit;
+			printf("\ninauntrul lui temp%d: ", *iterator);
+			printTemp(temp);
+			iterator = updateBuffer(compressedBuffer, iterator, temp);
+			*bitFlag = 0;
+			*(temp + *bitFlag) = currentBit;
+		}
+	}
+
+
+	return bitFlag;
+}
+
+
+int* loadCompressedBuffer(HuffmanMap* myMap, int position, unsigned char* compressedBuffer, 
+					int* iterator, int* bitFlag, unsigned char* temp)
+{
+
+	// memorez numarul de biti ai caracterului curent
+	int bitLength = myMap->bitLength[position];
+
+	/*
+	- incarc bitii corespunzatori codificarii caracterului curent in compressedBuffer
+	- semnific numarul de biti ramasi liberi
+	*/
+	bitFlag = writeBits(bitLength, compressedBuffer, myMap->codes[position], iterator, bitFlag, temp);
+	return bitFlag;
+} 
+
+void writeCompressedBufferToFile(unsigned char* buffer, FILE* outFile, int length)
+{
+	int i;
+	for (i = 0; i < length; i ++)
+	{
+		printf("%d", *(buffer+i));
+	}
+	//fwrite(buffer, sizeof(int), length, outFile);
+	//fclose(outFile);
+}
+
+void printBits(int* v, int n)
+{
+	int i;
+	for (i = 0; i < n; i ++)
+	{
+	
+		printf("%d", *(v+i));
+	}
+	printf("\n");
+}
+
+
+void testCompression(HuffmanMap* myMap, int position, unsigned char* compressedBuffer, 
+					int* iterator, int* bitFlag, unsigned char* temp)
+{
+
+	printf("%c:  ", myMap->data[position]);
+	printBits(myMap->codes[position], myMap->bitLength[position]);
+	bitFlag = writeBits(myMap->bitLength[position], compressedBuffer, myMap->codes[position], iterator, bitFlag, temp);	
+}
+
+void writeCompressedFile(FILE* outFile, unsigned char* fileBuffer, HuffmanMap* myMap, int fileLength)
+{
+
+	int i;
+
+
+	// lungimea fisierului in biti
+	int compressedLength = determineCompressedLength(myMap);
+	printf("\nFile Length: %d bytes\nCompressed Length: %d bytes\n", fileLength, compressedLength);
+
+
+	//aloc spatiu pentu compressedBuffer
+	unsigned char* compressedBuffer = (unsigned char*) malloc ((compressedLength)  * sizeof(char) + 1);
+	
+	//caracterul curent
+	char current;
+	
+	//variabila auxiliara care memoreaza pozitia la care am ramas in compressedBuffer
+	int* iterator = (int*) calloc (sizeof(int), 0);
+
+	//variabila auxiliara care memoreaza numarul de biti parcursi
+	int* bitFlag = (int*) calloc (sizeof(int), 0);
+
+	// vector care stocheaza 8 de biti
+	unsigned char *temp = (unsigned char*) calloc ( 8 * sizeof(unsigned char) + 1, 0);
+	
+
+	// creez un hashTable pentru acces in O(1) la elemente
+	// retin pozitiile i din myMap in hashTable[myMap->data[i]]
+	int* hashTable = (int*) malloc (255 * sizeof(int));
+	createHashTable(hashTable, myMap);
+
+
+	printf("\n*****TEST******\n");
+	//functie care parcurge textul si il codifica in compressedBuffer
+	for (i = 0; i < fileLength; i++)
+	{
+		
+		current = *(fileBuffer + i);
+
+		//determin pozitia caracterului curent in myMap cu ajutorul hashTable-ului
+		int position = returnPosition(current, hashTable);
+		//incarc in compressedBuffer informatia
+		//printf("caracterul curent: %c\n", current);
+		testCompression(myMap, position, compressedBuffer, iterator, bitFlag, temp);
+		//bitFlag = loadCompressedBuffer(myMap, position, compressedBuffer, iterator, bitFlag, temp);
+		
+	}
+	//scrierea buffer-ului rezultat in fisier
+	//writeCompressedBufferToFile(compressedBuffer, outFile, compressedLength);
+	
+}
+
 
 FILE* decodeFile(FILE* outFile, int** codes, char* array)
 {
@@ -727,11 +984,12 @@ HuffmanMap* HuffmanCodes(char data[], int freq[], int size)
 	MinHeapNode* root = buildHuffmanTree(data, freq, size); 
 
 	// Afisarea arborelui rezultat
+	printf("Codificarea obtinuta este:\n");
 	int arr[100], top = 0; 
 	printCodes(root, arr, top);
 
 	// Memorarea codurilor caracterelor
-	printf("\n\n********* TESTAREA FUNCTIEI STORECODES **********\n\n");
+	//printf("\n\n********* TESTAREA FUNCTIEI STORECODES **********\n\n");
 	storeCodes(root, arr, top, codes, bitLength);
 	
 	//Memorez toate datele structurii in myMap
@@ -765,7 +1023,7 @@ int main (int argc, char **argv)
 	char* buffer = loadBuffer(inFile, len); 
 
 // verifica pentru primele 10 caractere
-	test(buffer); 
+	//test(buffer); 
 
 /* determina frecventa si probabilitatile de aparitie ale fiecarui 
 caracter in parte */
@@ -789,17 +1047,17 @@ caracter in parte */
 // salvez codificarea intr-un vector de coduri si verific functionalitatea
 	HuffmanMap *myMap = HuffmanCodes(array, frecv, count);
 	
-	//verificarea structurii obtinute
+//verificarea structurii obtinute
 	printMap(myMap);
 
 // codific fisierul obtinut in outFile
-	//int* bitLength = ;
-	//FILE *outFile = fopen(argv[2], "wb");
-	//writeCompressedFile(outFile, buffer, codes, array, frecv, len, bitLength);
+
+	FILE *outFile = fopen(argv[2], "wb");
+	writeCompressedFile(outFile, buffer, myMap, len);
 
 // decodific fisierul pentru verificare
 	//FILE *decodedFile = fopen("fisier_decodificat.txt", "w");
-	//decodedFile = decodeFile(outFile, codes, array);
+	//decodedFile = decodeFile(outFile, myMap);
 
 
 	return 0;
