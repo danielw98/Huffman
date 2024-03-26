@@ -8,7 +8,7 @@ This project implements Huffman encoding and decoding algorithms in C, offering 
 - Generation of Huffman codes for character encoding.
 - Command-line interface for easy use.
 
-## Demo usage and output
+## Demo Usage and Output
 
 ![Huffman Codification Demo](https://raw.githubusercontent.com/danielw98/Huffman/master/HuffmanOutput.png)
 
@@ -22,7 +22,7 @@ make build
 
 This will generate the executable `huff` based on the `huffCodificareDecodificare.c` source file.
 
-## Using the program
+## Using the Program
 
 To encode a file, use:
 ```bash
