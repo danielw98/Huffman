@@ -2,6 +2,8 @@
 
 This project implements Huffman encoding and decoding algorithms in C, offering an efficient method for compressing and decompressing text files. The program calculates the frequency of each character in the input file, builds a Huffman tree based on these frequencies, and then uses this tree to encode the text. The encoded file is significantly smaller, demonstrating the efficiency of Huffman coding.
 
+On the given example, the program uses 4.57 bits to encode 4.38 bits of information, making it a useful tool for lossless compression and efficient decompression.
+
 ## Features
 - Text file compression and decompression using Huffman coding.
 - Calculation of Shannon information for input data.
