@@ -26,7 +26,7 @@ This will generate the executable `huff` based on the `huffCodificareDecodificar
 
 To encode a file, use:
 ```bash
-./huff &lt;filepath&gt;
+./huff <filepath>
 ```
 
 The program will create two files: compressedFile.txt for the encoded content and decodedFile.txt for the decoded content, demonstrating the lossless nature of the compression.
