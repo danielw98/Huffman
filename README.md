@@ -10,7 +10,7 @@ This project implements Huffman encoding and decoding algorithms in C, offering 
 
 ## Demo usage and output
 
-![Huffman Codification Demo](https://i.giphy.com/gw3IWyGkC0rsazTi.webp)
+![Huffman Codification Demo](https://raw.githubusercontent.com/danielw98/Huffman/master/HuffmanOutput.png)
 
 ## Building the Project
 
@@ -26,7 +26,7 @@ This will generate the executable `huff` based on the `huffCodificareDecodificar
 
 To encode a file, use:
 ```bash
-./huff &ltfilepath&gt
+./huff &lt;filepath&gt;
 ```
 
 The program will create two files: compressedFile.txt for the encoded content and decodedFile.txt for the decoded content, demonstrating the lossless nature of the compression.
